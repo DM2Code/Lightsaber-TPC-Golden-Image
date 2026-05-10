@@ -1,0 +1,39 @@
+rem ═══════════════════════════════════════════════════════════════
+rem  Diskpart-UEFI-Single.txt  –  Single Disk Mode
+rem
+rem  Used when only ONE physical drive is detected (Disk 0).
+rem  Disk 0 is partitioned into:
+rem    S:  EFI System Partition  (100 MB,  FAT32)
+rem        MSR                   ( 16 MB,  no letter)
+rem    W:  Windows / OS          ( 60 GB,  NTFS)   ← becomes C: after boot
+rem    D:  Data                  (remainder, NTFS)
+rem
+rem  To change the OS partition size edit the "size=" value on the
+rem  "create partition primary size=61440" line below.
+rem  61440 MB = 60 GB.  Adjust to taste before deploying.
+rem ═══════════════════════════════════════════════════════════════
+
+select disk 0
+clean
+convert gpt
+
+rem ── EFI System Partition ──────────────────────────────────────
+create partition efi size=100
+format quick fs=fat32 label="System"
+assign letter=S
+
+rem ── Microsoft Reserved Partition ─────────────────────────────
+create partition msr size=16
+
+rem ── OS / Windows Partition ───────────────────────────────────
+rem    Adjust size= (in MB) as needed. 61440 = 60 GB.
+create partition primary size=61440
+format quick fs=ntfs label="Windows"
+assign letter=W
+
+rem ── Data Partition (uses all remaining space) ─────────────────
+create partition primary
+format quick fs=ntfs label="Data"
+assign letter=D
+
+exit

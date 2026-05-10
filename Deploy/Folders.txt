@@ -1,6 +1,8 @@
 DEPLOY:\
 ├── Deploy\
-│   ├── Deploy-TPC.cmd     
-│   ├── Diskpart-UEFI.txt  
+│   ├── Deploy-TPC.cmd             
+│   ├── Diskpart-UEFI-Single.txt  ← (1-disk: OS + Data)
+│   ├── Diskpart-UEFI-Dual.txt    ← (2-disk: OS only on Disk 0)
+│   └── unattend.xml              ← (OOBE bypass)
 └── Images\
     └── golden-image.wim

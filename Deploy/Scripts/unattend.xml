@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+
+  <!--
+  ═══════════════════════════════════════════════════════════════════════
+   TPC Deployment  –  unattend.xml
+   Purpose : Skip all OOBE screens with US locale defaults.
+             No Microsoft account, no Wi-Fi setup, no telemetry opt-in.
+
+   BEFORE DEPLOYING:
+     1. Update <ComputerName> if the PC name changes from Lightsaber-TPC.
+     2. Confirm <TimeZone> matches the target region.
+
+   Placement (handled automatically by Deploy-TPC.cmd):
+     W:\Windows\Panther\unattend.xml
+  ═══════════════════════════════════════════════════════════════════════
+  -->
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       specialize pass
+       Runs once before first boot, after hardware is detected.
+       Good for machine-level settings (name, time zone).
+  ─────────────────────────────────────────────────────────────────────── -->
+  <settings pass="specialize">
+    <component name="Microsoft-Windows-Shell-Setup"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS"
+               xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+      <!-- Use * to let Windows generate a random suffix (e.g. TPC-3F2A).
+           Replace with a fixed string for a static hostname.           -->
+      <ComputerName>Lightsaber-TPC</ComputerName>
+      <TimeZone>Pacific Standard Time</TimeZone>
+    </component>
+  </settings>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       oobeSystem pass
+       Controls every screen the OOBE wizard would normally show.
+  ─────────────────────────────────────────────────────────────────────── -->
+  <settings pass="oobeSystem">
+
+    <!-- Locale and keyboard layout -->
+    <component name="Microsoft-Windows-International-Core"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS"
+               xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+      <InputLocale>en-US</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UILanguageFallback>en-US</UILanguageFallback>
+      <UserLocale>en-US</UserLocale>
+    </component>
+
+    <!-- Shell setup: suppress OOBE screens + create local admin account -->
+    <component name="Microsoft-Windows-Shell-Setup"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS"
+               xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+
+      <OOBE>
+        <!-- Skip the Microsoft EULA page -->
+        <HideEULAPage>true</HideEULAPage>
+
+        <!-- Skip "Create an account" screen (account is defined below) -->
+        <HideLocalAccountScreen>true</HideLocalAccountScreen>
+
+        <!-- Skip OEM registration / promotional screen -->
+        <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+
+        <!-- Skip Microsoft account / sign-in with Microsoft prompts -->
+        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+
+        <!-- Skip Wi-Fi / network connection setup -->
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+
+        <!-- Classify this machine as a Work network location -->
+        <NetworkLocation>Work</NetworkLocation>
+
+        <!-- 3 = decline automatic protection settings and diagnostic sharing
+             (i.e. "don't share my experience with Microsoft")            -->
+        <ProtectYourPC>3</ProtectYourPC>
+
+        <!-- Bypass the machine-level OOBE wizard entirely -->
+        <SkipMachineOOBE>true</SkipMachineOOBE>
+
+        <!-- Bypass per-user OOBE on first logon -->
+        <SkipUserOOBE>true</SkipUserOOBE>
+      </OOBE>
+
+      <!-- ── Local administrator account ───────────────────────────────
+           A local account must be defined here; otherwise Windows will
+           still display the "create account" OOBE screen.
+           Replace CHANGEME with the real password before deploying.
+      ──────────────────────────────────────────────────────────────── -->
+      <UserAccounts>
+        <LocalAccounts>
+          <LocalAccount wcm:action="add">
+            <Password>
+              <Value></Value>
+              <PlainText>true</PlainText>
+            </Password>
+            <DisplayName>AlconUser</DisplayName>
+            <Group>Administrators</Group>
+            <Name>AlconUser</Name>
+          </LocalAccount>
+        </LocalAccounts>
+      </UserAccounts>
+
+      <!-- ── Auto-logon (optional) ─────────────────────────────────────
+           Logs in automatically once so the desktop is ready without
+           a password prompt.  Remove this block if not desired.
+           LogonCount=1 means it only auto-logs in on the very first boot.
+      ──────────────────────────────────────────────────────────────── -->
+      <AutoLogon>
+        <Password>
+          <Value></Value>
+          <PlainText>true</PlainText>
+        </Password>
+        <Enabled>true</Enabled>
+        <LogonCount>1</LogonCount>
+        <Username>AlconUser</Username>
+      </AutoLogon>
+
+    </component>
+  </settings>
+
+</unattend>

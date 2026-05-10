@@ -1,0 +1,31 @@
+rem ═══════════════════════════════════════════════════════════════
+rem  Diskpart-UEFI-Dual.txt  –  Dual Disk Mode
+rem
+rem  Used when TWO or more physical drives are detected.
+rem    Disk 0  →  OS drive only (reformatted/repartitioned)
+rem    Disk 1  →  Data drive   (NOT touched by this script)
+rem
+rem  Disk 0 layout:
+rem    S:  EFI System Partition  (100 MB,  FAT32)
+rem        MSR                   ( 16 MB,  no letter)
+rem    W:  Windows / OS          (all remaining space, NTFS) ← becomes C: after boot
+rem ═══════════════════════════════════════════════════════════════
+
+select disk 0
+clean
+convert gpt
+
+rem ── EFI System Partition ──────────────────────────────────────
+create partition efi size=100
+format quick fs=fat32 label="System"
+assign letter=S
+
+rem ── Microsoft Reserved Partition ─────────────────────────────
+create partition msr size=16
+
+rem ── OS / Windows Partition (all remaining space) ──────────────
+create partition primary
+format quick fs=ntfs label="Windows"
+assign letter=W
+
+exit
