@@ -1,0 +1,6 @@
+DEPLOY:\
+├── Deploy\
+│   ├── Deploy-TPC.cmd     
+│   ├── Diskpart-UEFI.txt  
+└── Images\
+    └── golden-image.wim
