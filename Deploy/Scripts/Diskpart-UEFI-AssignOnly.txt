@@ -1,31 +1,33 @@
 rem ============================================================
-rem Diskpart-UEFI-AssignOnly.txt
-rem Used when Disk 0 already has the correct layout.
-rem This version FORMATS ONLY the OS partition (Partition 3).
-rem Data partition (Partition 4) is NOT formatted.
+rem Diskpart-UEFI-AssignOnly.txt (APPLY-ONLY MODE)
 rem ============================================================
 
 select disk 0
+attributes disk clear readonly noerr
 
-rem -- Clear disk readonly just in case
-attributes disk clear readonly
+rem ---- DATA volume -> keep files + D: ----
+select volume 1
+attributes volume clear readonly noerr
+remove letter=D noerr
+assign letter=D
 
-rem -- EFI partition -> S:
-select partition 1
-remove noerr
+rem ---- EFI volume -> S: ----
+select volume 2
+attributes volume clear readonly noerr
+remove letter=S noerr
 assign letter=S
 
-rem -- OS partition -> format + W:
-select partition 3
-attributes volume clear readonly
-remove noerr
-format quick fs=ntfs label="Windows"
-assign letter=W
+rem ---- OS volume: remove letter, then delete ----
+select volume 0
+attributes volume clear readonly noerr
+remove letter=C noerr
+remove letter=W noerr
+delete volume override
 
-rem -- Data partition -> assign D: only (no format)
-select partition 4
-attributes volume clear readonly
-remove noerr
-assign letter=D
+rem ---- Recreate OS partition in the freed space ----
+select disk 0
+create partition primary size=61440
+format fs=ntfs label="Windows"
+assign letter=W
 
 exit

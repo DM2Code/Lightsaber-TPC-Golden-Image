@@ -116,7 +116,8 @@ echo Pre-flight checks passed. >> "%TMPLOG%"
 
 REM ============================================================
 REM  STEP 2 - Determine disk mode (apply-only vs repartition)
-REM  Robust method: identify volumes by LABEL (Windows/Data/System)
+REM  Robust method: identify volumes by LABEL (Windows/Data/SYSTEM)
+REM  Works without findstr (uses find.exe)
 REM ============================================================
 echo.
 echo === STEP 2: Determining disk mode on Disk 0 ===
@@ -132,74 +133,66 @@ set "VOL_WIN="
 set "VOL_DATA="
 set "VOL_EFI="
 
-REM --- Find Windows volume number by label "Windows" ---
-for /f "tokens=2" %%V in ('
-  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i "Windows"
-') do (
-  REM diskpart output usually: "  Volume 3    W   Windows   NTFS   ..."
-  if /i "%%V"=="Volume" (
-    for /f "tokens=3" %%N in ("%%V %%V") do rem noop
-  )
-)
-
-REM The above token trick isn't reliable; instead parse properly:
-for /f "tokens=2,3" %%A in ('
-  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i "Windows"
+REM --- Find Windows volume number by label "Windows"
+REM diskpart line format: Volume <num> <ltr> <label> <fs> <type> <size> ...
+for /f "tokens=1,2" %%A in ('
+  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i " Windows"
 ') do (
   if /i "%%A"=="Volume" set "VOL_WIN=%%B"
 )
 
-REM --- Find Data volume number by label "Data" ---
-for /f "tokens=2,3" %%A in ('
-  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i "Data"
+REM --- Find Data volume number by label "Data"
+for /f "tokens=1,2" %%A in ('
+  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i " Data"
 ') do (
   if /i "%%A"=="Volume" set "VOL_DATA=%%B"
 )
 
-REM --- Find EFI/System volume number by label "System" (optional) ---
-for /f "tokens=2,3" %%A in ('
-  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i "System"
+REM --- Find EFI volume number by label "SYSTEM" (ESP FAT32 in your log)
+for /f "tokens=1,2" %%A in ('
+  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i " SYSTEM"
 ') do (
   if /i "%%A"=="Volume" set "VOL_EFI=%%B"
 )
 
-echo Detected VOL_WIN = [%VOL_WIN%] >> "%TMPLOG%"
+echo Detected VOL_WIN = [%VOL_WIN%]  >> "%TMPLOG%"
 echo Detected VOL_DATA= [%VOL_DATA%] >> "%TMPLOG%"
-echo Detected VOL_EFI = [%VOL_EFI%] >> "%TMPLOG%"
+echo Detected VOL_EFI = [%VOL_EFI%]  >> "%TMPLOG%"
 
-REM --- If we didn't find the labels, treat as unknown layout ---
+REM --- If we didn't find Windows or Data, treat as unknown layout ---
 if not defined VOL_WIN goto :step2_repartition
 if not defined VOL_DATA goto :step2_repartition
 
-REM --- Assign letters non-destructively based on volume numbers ---
+REM --- Assign letters based on volume numbers (non-destructive) ---
 (
   echo select volume %VOL_WIN%
   echo remove letter=W noerr
   echo assign letter=W
+
   echo select volume %VOL_DATA%
   echo remove letter=D noerr
   echo assign letter=D
 ) > "%TEMP%\dp_assign_labels.txt"
 
-REM EFI letter S is optional here; your bcdboot step needs S:
+REM EFI letter S is optional here; bcdboot step needs S:
 if defined VOL_EFI (
-  echo select volume %VOL_EFI%>> "%TEMP%\dp_assign_labels.txt"
-  echo remove letter=S noerr>> "%TEMP%\dp_assign_labels.txt"
-  echo assign letter=S>> "%TEMP%\dp_assign_labels.txt"
+  >> "%TEMP%\dp_assign_labels.txt" echo select volume %VOL_EFI%
+  >> "%TEMP%\dp_assign_labels.txt" echo remove letter=S noerr
+  >> "%TEMP%\dp_assign_labels.txt" echo assign letter=S
 )
 
 diskpart /s "%TEMP%\dp_assign_labels.txt" >> "%TMPLOG%" 2>&1
 
-REM --- Validate W: is real Windows ---
+REM --- Validate W: is real Windows (strong check) ---
 if exist W:\Windows\System32\config\SYSTEM (
-  echo Existing OS+Data confirmed by labels. APPLY-ONLY mode.>> "%TMPLOG%"
+  echo Existing OS+Data confirmed by label probe. APPLY-ONLY mode. >> "%TMPLOG%"
   set "DISK_MODE=apply_only"
   set "DISKPART_SCRIPT=%USBDRIVE%\Deploy\Diskpart-UEFI-AssignOnly.txt"
   goto :step2_done
 )
 
 :step2_repartition
-echo Layout not confirmed by label probe. REPARTITION mode.>> "%TMPLOG%"
+echo Layout not confirmed by label probe. REPARTITION mode. >> "%TMPLOG%"
 set "DISK_MODE=repartition"
 set "DISKPART_SCRIPT=%USBDRIVE%\Deploy\Diskpart-UEFI-Single.txt"
 
@@ -242,6 +235,13 @@ echo Confirmed. Repartitioning Disk 0...
 echo User confirmed erase. Repartitioning. >> "%TMPLOG%"
 
 :skip_erase_confirm
+
+REM -- Apply-only: force NTFS driver to drop the old volume before diskpart wipes it
+if "%DISK_MODE%"=="apply_only" (
+    echo Dismounting W: to flush NTFS volume cache before wipe...
+    echo Dismounting W: before partition wipe. >> "%TMPLOG%"
+    mountvol W: /d >nul 2>&1
+)
 
 REM -- Apply-only mode: brief confirmation, no data loss -------------------
 if "%DISK_MODE%"=="apply_only" (
@@ -349,45 +349,27 @@ echo === STEP 6: Enabling Keyboard Filter === >> "%TMPLOG%"
 
 
 REM ============================================================
-REM  STEP 7 - Post-deployment defaults (Default User)
-REM  - Solid color background (Navy)
-REM  - Disable Desktop Spotlight via policy
-REM  - Schedule PostFirstLogon.ps1 to enforce 100% scaling + background after first logon
+REM  STEP 7 - Post-deployment display defaults
+REM  Applied to Default user profile so AlconUser inherits.
+REM  - Display scale : 100% (96 DPI)
+REM  - Desktop       : solid Navy Blue (RGB 0 0 128)
+REM  - Wallpaper     : none
 REM ============================================================
 echo.
-echo === STEP 7: Applying display defaults (Default User) ===
-echo === STEP 7: Applying display defaults (Default User) === >> "%TMPLOG%"
+echo === STEP 7: Applying display defaults ===
+echo === STEP 7: Applying display defaults === >> "%TMPLOG%"
 
-reg load HKLM\TPC_DEFAULT "W:\Users\Default\NTUSER.DAT" >> "%TMPLOG%" 2>&1
-if errorlevel 1 (
-    echo WARNING: Could not load Default user hive.
-    echo WARNING: Could not load Default user hive. >> "%TMPLOG%"
-) else (
-
-    REM --- Disable Windows Spotlight collection on Desktop (policy) ---
-    REM Policy path (HKCU): Software\Policies\Microsoft\Windows\CloudContent
-    REM Value: DisableSpotlightCollectionOnDesktop=1  【1-140432】
-    reg add "HKLM\TPC_DEFAULT\Software\Policies\Microsoft\Windows\CloudContent" ^
-        /v DisableSpotlightCollectionOnDesktop /t REG_DWORD /d 1 /f >> "%TMPLOG%" 2>&1
-
-    REM --- Desktop background: Solid color (Navy Blue) ---
-    reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers" ^
-        /v BackgroundType /t REG_DWORD /d 1 /f >> "%TMPLOG%" 2>&1
-
-    reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Background" ^
-        /v BackgroundType /t REG_DWORD /d 1 /f >> "%TMPLOG%" 2>&1
-
-    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" ^
-        /v WallPaper /t REG_SZ /d "" /f >> "%TMPLOG%" 2>&1
-
-    reg add "HKLM\TPC_DEFAULT\Control Panel\Colors" ^
-        /v Background /t REG_SZ /d "0 0 128" /f >> "%TMPLOG%" 2>&1
-
+reg load HKLM\TPC_DEFAULT W:\Users\Default\NTUSER.DAT >> "%TMPLOG%" 2>&1
+if not errorlevel 1 (
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v LogPixels      /t REG_DWORD /d 96        /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1         /f >> "%TMPLOG%" 2>&1
     reg unload HKLM\TPC_DEFAULT >> "%TMPLOG%" 2>&1
-
     echo Display defaults applied.
     echo Display defaults applied. >> "%TMPLOG%"
-)
+) else (
+    echo WARNING: Could not load Default user hive.
+    echo WARNING: Could not load Default user hive. >> "%TMPLOG%"
+	)
 
 REM ============================================================
 REM  STEP 8 - [PLACEHOLDER] Enable Unified Write Filter (UWF)
