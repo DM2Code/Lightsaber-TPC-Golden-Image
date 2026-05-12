@@ -1,8 +1,13 @@
 rem ============================================================
-rem Diskpart-UEFI-Single.txt - Single Partition Mode
-rem ...
-rem Partition 4 Data (remaining, NTFS) -> assign D:
+rem Diskpart-UEFI-Single.txt - Full Repartition Mode
+rem
+rem Partitions created:
+rem   Partition 1 - EFI System Partition (100 MB, FAT32) -> S:
+rem   Partition 2 - Microsoft Reserved (16 MB)
+rem   Partition 3 - OS / Windows (100 GB, NTFS)          -> W:
+rem   Partition 4 - Data (all remaining, NTFS)            -> D:
 rem ============================================================
+
 select disk 0
 clean
 convert gpt
@@ -15,9 +20,9 @@ assign letter=S
 rem -- Microsoft Reserved Partition (16 MB) -----------------------------
 create partition msr size=16
 
-rem -- OS / Windows Partition (60 GB) -----------------------------------
-create partition primary size=61440
-format quick fs=ntfs label="Windows"
+rem -- OS / Windows Partition (100 GB) ----------------------------------
+create partition primary size=102400
+format fs=ntfs label="Windows"
 assign letter=W
 
 rem -- Data Partition (all remaining space) -----------------------------

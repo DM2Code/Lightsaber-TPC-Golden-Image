@@ -18,7 +18,7 @@ if not exist X:\Windows\System32\wpeutil.exe (
     echo   This script will ERASE Disk 0 if it runs on a
     echo   live Windows machine.
     echo.
-    echo   wpeutil.exe not found at X:\Windows\System32\.
+    echo   wpeutil.exe not found at X:\Windows\System32\
     echo   Boot from the USB drive to run this script.
     echo.
     echo  =====================================================
@@ -115,101 +115,61 @@ echo Pre-flight checks passed.
 echo Pre-flight checks passed. >> "%TMPLOG%"
 
 REM ============================================================
-REM  STEP 2 - Determine disk mode (apply-only vs repartition)
-REM  Robust method: identify volumes by LABEL (Windows/Data/SYSTEM)
-REM  Works without findstr (uses find.exe)
+REM  STEP 2 - User selects deployment mode
 REM ============================================================
 echo.
-echo === STEP 2: Determining disk mode on Disk 0 ===
-echo === STEP 2: Determining disk mode on Disk 0 === >> "%TMPLOG%"
+echo ============================================================
+echo  SELECT DEPLOYMENT MODE
+echo ============================================================
+echo.
+echo   1 - FULL FORMAT
+echo       Wipe Disk 0 completely and create fresh partitions.
+echo       USE WHEN: New disk, or disk layout is unknown/corrupt.
+echo       WARNING : ALL data on Disk 0 will be lost.
+echo.
+echo   2 - WIPE OS ONLY
+echo       Delete and recreate only the Windows partition.
+echo       The D: Data partition is preserved untouched.
+echo       USE WHEN: Redeploying an already-partitioned TPC disk.
+echo.
+echo ============================================================
 
-REM --- Dump volume list ---
-echo list volume > "%TEMP%\dp_listvol.txt"
-diskpart /s "%TEMP%\dp_listvol.txt" > "%TEMP%\dp_vols.txt" 2>&1
-type "%TEMP%\dp_vols.txt" >> "%TMPLOG%"
+:menu_prompt
+set MODESEL=
+set /p MODESEL=Enter choice (1 or 2): 
+if "%MODESEL%"=="1" goto :mode_repartition
+if "%MODESEL%"=="2" goto :mode_applyonly
+echo Invalid input. Please type 1 or 2.
+goto :menu_prompt
 
-REM --- Reset detection vars ---
-set "VOL_WIN="
-set "VOL_DATA="
-set "VOL_EFI="
-
-REM --- Find Windows volume number by label "Windows"
-REM diskpart line format: Volume <num> <ltr> <label> <fs> <type> <size> ...
-for /f "tokens=1,2" %%A in ('
-  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i " Windows"
-') do (
-  if /i "%%A"=="Volume" set "VOL_WIN=%%B"
-)
-
-REM --- Find Data volume number by label "Data"
-for /f "tokens=1,2" %%A in ('
-  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i " Data"
-') do (
-  if /i "%%A"=="Volume" set "VOL_DATA=%%B"
-)
-
-REM --- Find EFI volume number by label "SYSTEM" (ESP FAT32 in your log)
-for /f "tokens=1,2" %%A in ('
-  type "%TEMP%\dp_vols.txt" ^| X:\Windows\System32\find.exe /i " SYSTEM"
-') do (
-  if /i "%%A"=="Volume" set "VOL_EFI=%%B"
-)
-
-echo Detected VOL_WIN = [%VOL_WIN%]  >> "%TMPLOG%"
-echo Detected VOL_DATA= [%VOL_DATA%] >> "%TMPLOG%"
-echo Detected VOL_EFI = [%VOL_EFI%]  >> "%TMPLOG%"
-
-REM --- If we didn't find Windows or Data, treat as unknown layout ---
-if not defined VOL_WIN goto :step2_repartition
-if not defined VOL_DATA goto :step2_repartition
-
-REM --- Assign letters based on volume numbers (non-destructive) ---
-(
-  echo select volume %VOL_WIN%
-  echo remove letter=W noerr
-  echo assign letter=W
-
-  echo select volume %VOL_DATA%
-  echo remove letter=D noerr
-  echo assign letter=D
-) > "%TEMP%\dp_assign_labels.txt"
-
-REM EFI letter S is optional here; bcdboot step needs S:
-if defined VOL_EFI (
-  >> "%TEMP%\dp_assign_labels.txt" echo select volume %VOL_EFI%
-  >> "%TEMP%\dp_assign_labels.txt" echo remove letter=S noerr
-  >> "%TEMP%\dp_assign_labels.txt" echo assign letter=S
-)
-
-diskpart /s "%TEMP%\dp_assign_labels.txt" >> "%TMPLOG%" 2>&1
-
-REM --- Validate W: is real Windows (strong check) ---
-if exist W:\Windows\System32\config\SYSTEM (
-  echo Existing OS+Data confirmed by label probe. APPLY-ONLY mode. >> "%TMPLOG%"
-  set "DISK_MODE=apply_only"
-  set "DISKPART_SCRIPT=%USBDRIVE%\Deploy\Diskpart-UEFI-AssignOnly.txt"
-  goto :step2_done
-)
-
-:step2_repartition
-echo Layout not confirmed by label probe. REPARTITION mode. >> "%TMPLOG%"
+:mode_repartition
 set "DISK_MODE=repartition"
 set "DISKPART_SCRIPT=%USBDRIVE%\Deploy\Diskpart-UEFI-Single.txt"
+echo.
+echo Mode selected: FULL FORMAT
+echo Mode selected: FULL FORMAT >> "%TMPLOG%"
+goto :step2_done
+
+:mode_applyonly
+set "DISK_MODE=apply_only"
+set "DISKPART_SCRIPT=%USBDRIVE%\Deploy\Diskpart-UEFI-AssignOnly.txt"
+echo.
+echo Mode selected: WIPE OS ONLY
+echo Mode selected: WIPE OS ONLY >> "%TMPLOG%"
+goto :step2_done
 
 :step2_done
-echo Selected DISK_MODE      : %DISK_MODE%
-echo Selected DISKPART_SCRIPT: %DISKPART_SCRIPT%
-echo Selected DISK_MODE      : %DISK_MODE% >> "%TMPLOG%"
-echo Selected DISKPART_SCRIPT: %DISKPART_SCRIPT% >> "%TMPLOG%"
+echo Diskpart script: %DISKPART_SCRIPT%
+echo Diskpart script: %DISKPART_SCRIPT% >> "%TMPLOG%"
 
 REM ============================================================
-REM  STEP 3 - Confirmation then partition / assign letters
+REM  STEP 3 - Confirmation then run diskpart
 REM ============================================================
 echo.
 echo === STEP 3: Disk preparation ===
 echo === STEP 3: Disk preparation === >> "%TMPLOG%"
 
-REM -- Repartition mode: require explicit YES before wiping ----------------
+REM -- Full format: require explicit YES before wiping entire disk ---------
 if "%DISK_MODE%"=="repartition" goto :confirm_erase
 goto :skip_erase_confirm
 
@@ -226,40 +186,34 @@ set CONFIRM=
 set /p CONFIRM=Confirm full erase (YES): 
 if /i not "%CONFIRM%"=="YES" (
     echo Aborted. Disk 0 was NOT modified.
-    echo Aborted by user. Disk 0 not modified. >> "%TMPLOG%"
+    echo Aborted by user >> "%TMPLOG%"
     copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
     pause
     exit /b 1
 )
 echo Confirmed. Repartitioning Disk 0...
-echo User confirmed erase. Repartitioning. >> "%TMPLOG%"
+echo User confirmed full erase >> "%TMPLOG%"
+goto :skip_erase_confirm
 
 :skip_erase_confirm
 
-REM -- Apply-only: force NTFS driver to drop the old volume before diskpart wipes it
-if "%DISK_MODE%"=="apply_only" (
-    echo Dismounting W: to flush NTFS volume cache before wipe...
-    echo Dismounting W: before partition wipe. >> "%TMPLOG%"
-    mountvol W: /d >nul 2>&1
-)
-
-REM -- Apply-only mode: brief confirmation, no data loss -------------------
+REM -- Wipe OS only: brief confirmation, remind user D: is safe ------------
 if "%DISK_MODE%"=="apply_only" (
     echo.
-    echo  The OS partition will be overwritten with the new image.
+    echo  The Windows partition will be deleted and recreated.
     echo  D: Data drive will NOT be formatted or erased.
     echo.
     echo  Press ENTER to continue or close this window to abort.
     pause >nul
 )
 
-echo Running: %DISKPART_SCRIPT%
+echo Running diskpart: %DISKPART_SCRIPT%
 echo Running diskpart: %DISKPART_SCRIPT% >> "%TMPLOG%"
 
 diskpart /s "%DISKPART_SCRIPT%" >> "%TMPLOG%" 2>&1
 if errorlevel 1 (
     echo ERROR: Diskpart failed. See log.
-    echo ERROR: Diskpart failed. >> "%TMPLOG%"
+    echo ERROR: Diskpart failed >> "%TMPLOG%"
     copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
     pause
     exit /b 1
@@ -267,20 +221,20 @@ if errorlevel 1 (
 
 if not exist S:\ (
     echo ERROR: S: EFI partition not found after diskpart.
-    echo ERROR: S: not found after diskpart. >> "%TMPLOG%"
+    echo ERROR: S: not found after diskpart >> "%TMPLOG%"
     copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
     pause
     exit /b 1
 )
 if not exist W:\ (
     echo ERROR: W: OS partition not found after diskpart.
-    echo ERROR: W: not found after diskpart. >> "%TMPLOG%"
+    echo ERROR: W: not found after diskpart >> "%TMPLOG%"
     copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
     pause
     exit /b 1
 )
-echo S: (EFI) and W: (OS) confirmed.
-echo S: and W: confirmed. >> "%TMPLOG%"
+echo S: and W: confirmed.
+echo S: and W: confirmed >> "%TMPLOG%"
 
 REM ============================================================
 REM  STEP 4 - Apply the WIM image
@@ -289,34 +243,41 @@ echo.
 echo === STEP 4: Applying image to W:\ ===
 echo === STEP 4: Applying image to W:\ === >> "%TMPLOG%"
 
-echo DEBUG: Testing W: write access... >> "%TMPLOG%"
-echo test > W:\__write_test__.txt 2>>"%TMPLOG%"
-if errorlevel 1 (
-    echo ERROR: W: not writable ^(Access denied^). >> "%TMPLOG%"
-) else (
-    del /f /q W:\__write_test__.txt >nul 2>&1
-    echo OK: W: writable. >> "%TMPLOG%"
-)
-
-dism /LogPath:"%TMPLOG%" /Apply-Image /ImageFile:"%IMG%" /Index:1 /ApplyDir:W:\
-if errorlevel 1 (
-    echo ERROR: DISM Apply-Image failed. See log.
-    echo ERROR: DISM Apply-Image failed. >> "%TMPLOG%"
+REM --- Safety gate: WindowsApps must NOT exist on a freshly wiped volume ---
+if exist "W:\Program Files\WindowsApps" (
+    echo ERROR: WindowsApps detected on W: - partition was not wiped cleanly.
+    echo ERROR: WindowsApps detected - partition not wiped >> "%TMPLOG%"
+    echo Use FULL FORMAT mode if WIPE OS ONLY keeps failing.
     copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
     pause
     exit /b 1
 )
 
+REM --- Run DISM ---
+set "DISMLOG=X:\dism_apply_%DATESTR%.log"
+dism /LogLevel:4 /LogPath:"%DISMLOG%" /Apply-Image /ImageFile:"%IMG%" /Index:1 /ApplyDir:W:\
+set "DISM_RC=%errorlevel%"
+
+if exist "%DISMLOG%" type "%DISMLOG%" >> "%TMPLOG%"
+
+if not "%DISM_RC%"=="0" (
+    echo ERROR: DISM Apply-Image failed. RC=%DISM_RC%
+    echo ERROR: DISM failed RC=%DISM_RC% >> "%TMPLOG%"
+    copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
+    pause
+    exit /b %DISM_RC%
+)
+
 if not exist W:\Windows\System32\bcdboot.exe (
     echo ERROR: W:\Windows does not look valid after DISM.
-    echo ERROR: W:\Windows invalid after DISM. >> "%TMPLOG%"
+    echo ERROR: W:\Windows invalid after DISM >> "%TMPLOG%"
     copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
     pause
     exit /b 1
 )
 
 echo Image applied and verified.
-echo Image applied and verified. >> "%TMPLOG%"
+echo Image applied and verified >> "%TMPLOG%"
 
 REM ============================================================
 REM  STEP 5 - Inject unattend.xml to skip OOBE
@@ -329,10 +290,10 @@ if not exist W:\Windows\Panther mkdir W:\Windows\Panther
 copy /Y "%USBDRIVE%\Deploy\unattend.xml" W:\Windows\Panther\unattend.xml >> "%TMPLOG%" 2>&1
 if errorlevel 1 (
     echo WARNING: Could not copy unattend.xml.
-    echo WARNING: Could not copy unattend.xml. >> "%TMPLOG%"
+    echo WARNING: Could not copy unattend.xml >> "%TMPLOG%"
 ) else (
     echo unattend.xml injected.
-    echo unattend.xml injected. >> "%TMPLOG%"
+    echo unattend.xml injected >> "%TMPLOG%"
 )
 
 REM ============================================================
@@ -361,15 +322,15 @@ echo === STEP 7: Applying display defaults === >> "%TMPLOG%"
 
 reg load HKLM\TPC_DEFAULT W:\Users\Default\NTUSER.DAT >> "%TMPLOG%" 2>&1
 if not errorlevel 1 (
-    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v LogPixels      /t REG_DWORD /d 96        /f >> "%TMPLOG%" 2>&1
-    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1         /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v LogPixels      /t REG_DWORD /d 96 /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1  /f >> "%TMPLOG%" 2>&1
     reg unload HKLM\TPC_DEFAULT >> "%TMPLOG%" 2>&1
     echo Display defaults applied.
-    echo Display defaults applied. >> "%TMPLOG%"
+    echo Display defaults applied >> "%TMPLOG%"
 ) else (
     echo WARNING: Could not load Default user hive.
-    echo WARNING: Could not load Default user hive. >> "%TMPLOG%"
-	)
+    echo WARNING: Could not load Default user hive >> "%TMPLOG%"
+)
 
 REM ============================================================
 REM  STEP 8 - [PLACEHOLDER] Enable Unified Write Filter (UWF)
@@ -391,7 +352,7 @@ echo === STEP 9: Creating boot files (UEFI) === >> "%TMPLOG%"
 
 if not exist S:\ (
     echo ERROR: S: not found. Cannot create boot files.
-    echo ERROR: S: not found before bcdboot. >> "%TMPLOG%"
+    echo ERROR: S: not found before bcdboot >> "%TMPLOG%"
     copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
     pause
     exit /b 1
@@ -400,20 +361,20 @@ if not exist S:\ (
 W:\Windows\System32\bcdboot W:\Windows /s S: /f UEFI >> "%TMPLOG%" 2>&1
 if errorlevel 1 (
     echo ERROR: BCDBoot failed. See log.
-    echo ERROR: BCDBoot failed. >> "%TMPLOG%"
+    echo ERROR: BCDBoot failed >> "%TMPLOG%"
     copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
     pause
     exit /b 1
 )
 echo Boot files created.
-echo Boot files created. >> "%TMPLOG%"
+echo Boot files created >> "%TMPLOG%"
 
 REM ============================================================
 REM  Copy log to D:\ then prompt for reboot
 REM ============================================================
 echo.
 echo Copying log to D:\...
-echo Deployment complete. >> "%TMPLOG%"
+echo Deployment complete >> "%TMPLOG%"
 copy /Y "%TMPLOG%" "%FINALLOG%" >nul 2>&1
 if errorlevel 1 (
     echo WARNING: Log could not be saved to D:\ - retrieve from USB: %TMPLOG%

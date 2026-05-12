@@ -1,32 +1,50 @@
 rem ============================================================
 rem Diskpart-UEFI-AssignOnly.txt (APPLY-ONLY MODE)
+rem
+rem Goal:
+rem  - Preserve DATA volume (label "Data") and ensure it is D:
+rem  - Ensure EFI volume (label "SYSTEM") is S:
+rem  - DELETE + RECREATE + FULL FORMAT ONLY the OS volume (label "Windows"),
+rem    recreate it at 100 GB, then assign W:
+rem
+rem Why full format (no "quick"):
+rem  - Quick format only writes a new MFT header. Old protected directories
+rem    (e.g. WindowsApps) may still be physically present on disk.
+rem  - Full format zeroes every sector, guaranteeing a clean filesystem.
+rem
+rem NOTE: mountvol W: /d must be called in Deploy-TPC.cmd BEFORE running
+rem  this script to flush the NTFS kernel volume cache. Without that step
+rem  the NTFS driver may still serve stale data from memory even after the
+rem  partition is deleted and reformatted.
 rem ============================================================
 
 select disk 0
 attributes disk clear readonly noerr
 
-rem ---- DATA volume -> keep files + D: ----
+rem ---- DATA volume: label Data -> keep files + D: ----
 select volume 1
 attributes volume clear readonly noerr
 remove letter=D noerr
 assign letter=D
 
-rem ---- EFI volume -> S: ----
+rem ---- EFI volume: label SYSTEM (FAT32) -> S: ----
 select volume 2
 attributes volume clear readonly noerr
 remove letter=S noerr
 assign letter=S
 
-rem ---- OS volume: remove letter, then delete ----
+rem ---- OS volume: drop letters, then delete ----
 select volume 0
 attributes volume clear readonly noerr
 remove letter=C noerr
 remove letter=W noerr
 delete volume override
 
-rem ---- Recreate OS partition in the freed space ----
+rem ---- Recreate OS partition (100 GB) in the freed space ----
+rem  create partition primary auto-selects the new partition;
+rem  "select partition last" is NOT needed and will error here.
 select disk 0
-create partition primary size=61440
+create partition primary size=102400
 format fs=ntfs label="Windows"
 assign letter=W
 
