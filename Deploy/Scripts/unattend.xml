@@ -6,6 +6,7 @@
    TPC Deployment  –  unattend.xml
    Purpose : Skip all OOBE screens with US locale defaults.
              No Microsoft account, no Wi-Fi setup, no telemetry opt-in.
+             Sets solid navy-blue desktop background for all users.
 
    BEFORE DEPLOYING:
      1. Update <ComputerName> if the PC name changes from Lightsaber-TPC.
@@ -126,6 +127,38 @@
         <LogonCount>1</LogonCount>
         <Username>AlconUser</Username>
       </AutoLogon>
+
+      <!-- ── Desktop background: navy blue solid color ─────────────────
+           Stage 1 (Default User hive) is handled offline by Deploy-TPC.cmd
+           Step 7, which loads W:\Users\Default\NTUSER.DAT and writes all
+           background and Spotlight registry keys before first boot.
+
+           Stage 2 here is a safety net: runs as AlconUser on first logon,
+           writes the same values into HKCU, and restarts Explorer to apply
+           immediately — covers re-deployments where the profile already
+           exists and inherited values may have been overwritten.
+
+           Script is copied from USB to W:\Windows\Setup\Scripts\ by
+           Deploy-TPC.cmd Step 5 during every deployment.
+      ──────────────────────────────────────────────────────────────── -->
+
+      <!-- STAGE 2 only: Apply to AlconUser's HKCU on first logon -->
+      <FirstLogonCommands>
+        <SynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <Description>Set navy blue background for AlconUser</Description>
+          <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\SetBackground-CurrentUser.ps1"</CommandLine>
+          <RequiresUserInput>false</RequiresUserInput>
+        </SynchronousCommand>
+        
+        <SynchronousCommand wcm:action="add">
+          <Order>2</Order>
+          <Description>Reboot after OOBE to apply background</Description>
+          <CommandLine>shutdown /r /t 5</CommandLine>
+          <RequiresUserInput>false</RequiresUserInput>
+        </SynchronousCommand>
+
+      </FirstLogonCommands>
 
     </component>
   </settings>

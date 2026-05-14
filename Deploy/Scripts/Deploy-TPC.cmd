@@ -104,6 +104,11 @@ if not exist "%USBDRIVE%\Deploy\unattend.xml" (
     echo ERROR: Missing unattend.xml >> "%TMPLOG%"
     set PREFLIGHT_OK=0
 )
+if not exist "%USBDRIVE%\Scripts\SetBackground-CurrentUser.ps1" (
+    echo ERROR: Missing %USBDRIVE%\Scripts\SetBackground-CurrentUser.ps1
+    echo ERROR: Missing SetBackground-CurrentUser.ps1 >> "%TMPLOG%"
+    set PREFLIGHT_OK=0
+)
 if "%PREFLIGHT_OK%"=="0" (
     echo Pre-flight failed. Ensure all Deploy files are on the USB.
     echo Pre-flight failed. >> "%TMPLOG%"
@@ -296,6 +301,17 @@ if errorlevel 1 (
     echo unattend.xml injected >> "%TMPLOG%"
 )
 
+REM -- Copy per-user background script so FirstLogonCommands can call it ----
+if not exist W:\Windows\Setup\Scripts mkdir W:\Windows\Setup\Scripts
+xcopy /Y "%USBDRIVE%\Scripts\*" "W:\Windows\Setup\Scripts\" >> "%TMPLOG%" 2>&1
+if errorlevel 1 (
+    echo WARNING: Could not copy deployment scripts.
+    echo WARNING: Could not copy deployment scripts >> "%TMPLOG%"
+) else (
+    echo Deployment scripts copied to W:\Windows\Setup\Scripts\
+    echo Deployment scripts copied >> "%TMPLOG%"
+)
+
 REM ============================================================
 REM  STEP 6 - Enable Keyboard Filter (offline DISM)
 REM  /All auto-enables parent feature Client-DeviceLockdown.
@@ -315,6 +331,7 @@ REM  Applied to Default user profile so AlconUser inherits.
 REM  - Display scale : 100% (96 DPI)
 REM  - Desktop       : solid Navy Blue (RGB 0 0 128)
 REM  - Wallpaper     : none
+REM  - Spotlight     : disabled (all ContentDeliveryManager keys)
 REM ============================================================
 echo.
 echo === STEP 7: Applying display defaults ===
@@ -322,8 +339,25 @@ echo === STEP 7: Applying display defaults === >> "%TMPLOG%"
 
 reg load HKLM\TPC_DEFAULT W:\Users\Default\NTUSER.DAT >> "%TMPLOG%" 2>&1
 if not errorlevel 1 (
+
+    REM -- DPI / display scale (100% = 96 DPI) --
     reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v LogPixels      /t REG_DWORD /d 96 /f >> "%TMPLOG%" 2>&1
     reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1  /f >> "%TMPLOG%" 2>&1
+
+    REM -- Solid navy blue background (no wallpaper image) --
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Wallpaper      /t REG_SZ    /d ""        /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v WallpaperStyle /t REG_SZ    /d "0"       /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Colors"  /v Background     /t REG_SZ    /d "0 0 128" /f >> "%TMPLOG%" 2>&1
+
+    REM -- Disable Windows Spotlight (all kill switches) --
+    REM    ContentDeliveryAllowed = master switch (required on Win 11)
+    reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v ContentDeliveryAllowed          /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338388Enabled /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338387Enabled /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v RotatingLockScreenEnabled       /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SoftLandingEnabled              /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SystemPaneSuggestionsEnabled    /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1
+
     reg unload HKLM\TPC_DEFAULT >> "%TMPLOG%" 2>&1
     echo Display defaults applied.
     echo Display defaults applied >> "%TMPLOG%"
