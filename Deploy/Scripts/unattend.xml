@@ -103,7 +103,7 @@
         <LocalAccounts>
           <LocalAccount wcm:action="add">
             <Password>
-              <Value></Value>
+              <Value>L1ghts@b3r</Value>
               <PlainText>true</PlainText>
             </Password>
             <DisplayName>AlconUser</DisplayName>
@@ -120,11 +120,11 @@
       ──────────────────────────────────────────────────────────────── -->
       <AutoLogon>
         <Password>
-          <Value></Value>
+          <Value>L1ghts@b3r</Value>
           <PlainText>true</PlainText>
         </Password>
         <Enabled>true</Enabled>
-        <LogonCount>1</LogonCount>
+        <LogonCount>2</LogonCount>
         <Username>AlconUser</Username>
       </AutoLogon>
 
@@ -153,6 +153,13 @@
         
         <SynchronousCommand wcm:action="add">
           <Order>2</Order>
+          <Description>Create Lightsaber Panel desktop shortcut</Description>
+          <CommandLine>powershell.exe -ExecutionPolicy Bypass -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\Lightsaber Panel.lnk'); $s.TargetPath = 'C:\Program Files\Alcon Research\Lightsaber Panel\Lightsaber Panel.exe'; $s.Save()"</CommandLine>
+          <RequiresUserInput>false</RequiresUserInput>
+        </SynchronousCommand>
+        
+        <SynchronousCommand wcm:action="add">
+          <Order>3</Order>
           <Description>Reboot after OOBE to apply background</Description>
           <CommandLine>shutdown /r /t 5</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
