@@ -277,6 +277,8 @@ if errorlevel 1 (
     echo Deployment scripts copied >> "%TMPLOG%"
 )
 
+copy /Y "%USBDRIVE%\Utils\qres\QRes.exe" "W:\Windows\Setup\Scripts\QRes.exe" >> "%TMPLOG%" 2>&1
+
 REM ============================================================
 REM  STEP 7 - Enable Keyboard Filter
 REM    sc stop  MsKeyboardFilter  -> service mode (FSE access)
@@ -289,7 +291,7 @@ echo === Enabling Keyboard Filter - Skipped (placeholder) === >> "%TMPLOG%"
 
 REM ============================================================
 REM  STEP 8 - Applying display defaults
-REM  - Display scale : 100% (96 DPI)
+REM  - Display scale : 125% (120 DPI)
 REM  - Desktop       : solid Navy Blue (RGB 0 0 128)
 REM  - Wallpaper     : none
 REM  - Spotlight     : disabled (all ContentDeliveryManager keys)
@@ -301,9 +303,9 @@ echo === Applying display defaults === >> "%TMPLOG%"
 reg load HKLM\TPC_DEFAULT W:\Users\Default\NTUSER.DAT >> "%TMPLOG%" 2>&1
 if not errorlevel 1 (
 
-    REM -- DPI / display scale (100% = 96 DPI) --
-    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v LogPixels      /t REG_DWORD /d 96 /f >> "%TMPLOG%" 2>&1
-    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1  /f >> "%TMPLOG%" 2>&1
+    REM -- DPI / display scale (125% = 120 DPI) or (100% = 96 DPI) --
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v LogPixels      /t REG_DWORD /d 120 /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1   /f >> "%TMPLOG%" 2>&1
 
     REM -- Solid navy blue background (no wallpaper image) --
     reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Wallpaper      /t REG_SZ    /d ""        /f >> "%TMPLOG%" 2>&1
@@ -311,7 +313,6 @@ if not errorlevel 1 (
     reg add "HKLM\TPC_DEFAULT\Control Panel\Colors"  /v Background     /t REG_SZ    /d "0 0 128" /f >> "%TMPLOG%" 2>&1
 
     REM -- Disable Windows Spotlight (all kill switches) --
-    REM    ContentDeliveryAllowed = master switch (required on Win 11)
     reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v ContentDeliveryAllowed          /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1
     reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338388Enabled /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1
     reg add "HKLM\TPC_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338387Enabled /t REG_DWORD /d 0 /f >> "%TMPLOG%" 2>&1

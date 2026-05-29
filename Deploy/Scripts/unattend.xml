@@ -146,25 +146,31 @@
       <FirstLogonCommands>
         <SynchronousCommand wcm:action="add">
           <Order>1</Order>
+          <Description>Set display resolution to 1152x864</Description>
+          <CommandLine>C:\Windows\Setup\Scripts\QRes.exe /X:1152 /Y:864</CommandLine>
+          <RequiresUserInput>false</RequiresUserInput>
+        </SynchronousCommand>     
+
+        <SynchronousCommand wcm:action="add">
+          <Order>2</Order>
           <Description>Set navy blue background for AlconUser</Description>
           <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\SetBackground-CurrentUser.ps1"</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
         
         <SynchronousCommand wcm:action="add">
-          <Order>2</Order>
+          <Order>3</Order>
           <Description>Create Lightsaber Panel desktop shortcut</Description>
           <CommandLine>powershell.exe -ExecutionPolicy Bypass -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\Lightsaber Panel.lnk'); $s.TargetPath = 'C:\Program Files\Alcon Research\Lightsaber Panel\Lightsaber Panel.exe'; $s.Save()"</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
         
         <SynchronousCommand wcm:action="add">
-          <Order>3</Order>
+          <Order>4</Order>
           <Description>Reboot after OOBE to apply background</Description>
           <CommandLine>shutdown /r /t 5</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
-
       </FirstLogonCommands>
 
     </component>

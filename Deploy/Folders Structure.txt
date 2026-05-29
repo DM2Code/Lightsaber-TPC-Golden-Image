@@ -8,3 +8,8 @@ DEPLOY:\
 │   └── unattend.xml              ← (OOBE bypass)
 └── Images\
     └── golden-image.wim
+└── Scripts\
+    └── SetBackground-CurrentUser.ps1
+└── Utils\
+    └── qres
+		└── QRes.exe
