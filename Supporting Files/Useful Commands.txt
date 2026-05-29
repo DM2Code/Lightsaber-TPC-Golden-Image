@@ -1,0 +1,15 @@
+# Step 1: Remove the user-installed package
+Get-AppxPackage -AllUsers *Ink.Handwriting* | Remove-AppxPackage -AllUsers
+
+# Step 2: Also remove the provisioned version (if it exists)
+Get-AppxProvisionedPackage -Online | Where-Object {$_.PackageName -like "*Ink.Handwriting*"} | Remove-AppxProvisionedPackage -Online
+
+
+# Create shortcut
+$ws = New-Object -ComObject WScript.Shell
+$s = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\Lightsaber Panel.lnk')
+$s.TargetPath = 'C:\Program Files\Alcon Research\Lightsaber Panel\Lightsaber Panel.exe'
+$s.Save()
+
+# Test Path
+Test-Path 'C:\Program Files\Alcon Research\Lightsaber Panel\Lightsaber Panel.exe'
