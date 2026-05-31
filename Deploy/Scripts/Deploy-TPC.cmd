@@ -304,7 +304,7 @@ reg load HKLM\TPC_DEFAULT W:\Users\Default\NTUSER.DAT >> "%TMPLOG%" 2>&1
 if not errorlevel 1 (
 
     REM -- DPI / display scale (125% = 120 DPI) or (100% = 96 DPI) --
-    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v LogPixels      /t REG_DWORD /d 120 /f >> "%TMPLOG%" 2>&1
+    reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v LogPixels      /t REG_DWORD /d 96 /f >> "%TMPLOG%" 2>&1
     reg add "HKLM\TPC_DEFAULT\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1   /f >> "%TMPLOG%" 2>&1
 
     REM -- Solid navy blue background (no wallpaper image) --
