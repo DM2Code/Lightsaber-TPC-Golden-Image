@@ -67,18 +67,18 @@ echo === Verify all required files exist on USB ===
 echo === Verify all required files exist on USB === >> "%TMPLOG%"
 
 set ALL_FILES_EXIST=1
-if not exist "%USBDRIVE%\Deploy\Diskpart-UEFI-Single.txt" (
-    echo ERROR: Missing %USBDRIVE%\Deploy\Diskpart-UEFI-Single.txt
+if not exist "%USBDRIVE%\Scripts\Diskpart-UEFI-Single.txt" (
+    echo ERROR: Missing %USBDRIVE%\Scripts\Diskpart-UEFI-Single.txt
     echo ERROR: Missing Diskpart-UEFI-Single.txt >> "%TMPLOG%"
     set ALL_FILES_EXIST=0
 )
-if not exist "%USBDRIVE%\Deploy\Diskpart-UEFI-AssignOnly.txt" (
-    echo ERROR: Missing %USBDRIVE%\Deploy\Diskpart-UEFI-AssignOnly.txt
+if not exist "%USBDRIVE%\Scripts\Diskpart-UEFI-AssignOnly.txt" (
+    echo ERROR: Missing %USBDRIVE%\Scripts\Diskpart-UEFI-AssignOnly.txt
     echo ERROR: Missing Diskpart-UEFI-AssignOnly.txt >> "%TMPLOG%"
     set ALL_FILES_EXIST=0
 )
-if not exist "%USBDRIVE%\Deploy\unattend.xml" (
-    echo ERROR: Missing %USBDRIVE%\Deploy\unattend.xml
+if not exist "%USBDRIVE%\Scripts\unattend.xml" (
+    echo ERROR: Missing %USBDRIVE%\Scripts\unattend.xml
     echo ERROR: Missing unattend.xml >> "%TMPLOG%"
     set ALL_FILES_EXIST=0
 )
@@ -106,10 +106,10 @@ echo  SELECT DEPLOYMENT MODE
 echo ============================================================
 echo.
 echo   1 - FULL FORMAT
-echo       Wipe both C: and D: completely and create fresh partitions.
+echo       Wipe both C: and D: drives completely and create fresh partitions.
 echo.
 echo   2 - WIPE OS ONLY
-echo       Wipe only the C: partition, preserving existing D: Data partition.
+echo       Wipe only the C: drive, preserving existing D: Data drive.
 echo.
 echo ============================================================
 
@@ -123,7 +123,7 @@ goto :menu_prompt
 
 :mode_repartition
 set "DISK_MODE=repartition"
-set "DISKPART_SCRIPT=%USBDRIVE%\Deploy\Diskpart-UEFI-Single.txt"
+set "DISKPART_SCRIPT=%USBDRIVE%\Scripts\Diskpart-UEFI-Single.txt"
 echo.
 echo Mode selected: FULL FORMAT
 echo Mode selected: FULL FORMAT >> "%TMPLOG%"
@@ -131,7 +131,7 @@ goto :step2_done
 
 :mode_applyonly
 set "DISK_MODE=apply_only"
-set "DISKPART_SCRIPT=%USBDRIVE%\Deploy\Diskpart-UEFI-AssignOnly.txt"
+set "DISKPART_SCRIPT=%USBDRIVE%\Scripts\Diskpart-UEFI-AssignOnly.txt"
 echo.
 echo Mode selected: WIPE OS ONLY
 echo Mode selected: WIPE OS ONLY >> "%TMPLOG%"
@@ -258,7 +258,7 @@ echo === Injecting unattend.xml ===
 echo === Injecting unattend.xml === >> "%TMPLOG%"
 
 if not exist W:\Windows\Panther mkdir W:\Windows\Panther
-copy /Y "%USBDRIVE%\Deploy\unattend.xml" W:\Windows\Panther\unattend.xml >> "%TMPLOG%" 2>&1
+copy /Y "%USBDRIVE%\Scripts\unattend.xml" W:\Windows\Panther\unattend.xml >> "%TMPLOG%" 2>&1
 if errorlevel 1 (
     echo WARNING: Could not copy unattend.xml.
     echo WARNING: Could not copy unattend.xml >> "%TMPLOG%"
@@ -277,20 +277,10 @@ if errorlevel 1 (
     echo Deployment scripts copied >> "%TMPLOG%"
 )
 
-copy /Y "%USBDRIVE%\Utils\qres\QRes.exe" "W:\Windows\Setup\Scripts\QRes.exe" >> "%TMPLOG%" 2>&1
+copy /Y "%USBDRIVE%\Utils\QRes.exe" "W:\Windows\Setup\Scripts\QRes.exe" >> "%TMPLOG%" 2>&1
 
 REM ============================================================
-REM  STEP 7 - Enable Keyboard Filter
-REM    sc stop  MsKeyboardFilter  -> service mode (FSE access)
-REM    sc start MsKeyboardFilter  -> kiosk lockdown
-REM ============================================================
-echo.
-echo === Enabling Keyboard Filter - Skipped (placeholder) ===
-echo === Enabling Keyboard Filter - Skipped (placeholder) === >> "%TMPLOG%"
-
-
-REM ============================================================
-REM  STEP 8 - Applying display defaults
+REM  STEP 7 - Applying display defaults
 REM  - Display scale : 125% (120 DPI)
 REM  - Desktop       : solid Navy Blue (RGB 0 0 128)
 REM  - Wallpaper     : none
@@ -329,15 +319,7 @@ if not errorlevel 1 (
 )
 
 REM ============================================================
-REM  STEP 9 - [PLACEHOLDER] Enable Unified Write Filter (UWF)
-REM ============================================================
-echo.
-echo === Write Filter - Skipped (placeholder) ===
-echo === Write Filter - Skipped (placeholder) === >> "%TMPLOG%"
-REM dism /Image:W:\ /Enable-Feature /FeatureName:Client-UnifiedWriteFilter /All /NoRestart >> "%TMPLOG%" 2>&1
-
-REM ============================================================
-REM  STEP 10 - Create UEFI boot files
+REM  STEP 8 - Create UEFI boot files
 REM ============================================================
 echo.
 echo === Creating boot files (UEFI) ===
