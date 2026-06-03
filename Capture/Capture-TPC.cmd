@@ -6,104 +6,153 @@ echo   CAPTURE-TPC - Capture WIM with Timestamp (WinPE)
 echo ==========================================================
 echo.
 echo SAFETY:
-echo  - This should be run ONLY after:
+echo  - Run ONLY after:
 echo      sysprep /generalize /oobe /shutdown
-echo  - And ONLY when booted into WinPE (X:\).
+echo  - Booted into WinPE (X:\)
 echo.
-echo You will be capturing C:\ to a WIM on D:\ (Data Drive).
+echo This script captures C:\ into a WIM on D:\
 echo.
 
-REM ---- Verify we are in WinPE (X: drive exists and is WinPE RAM disk) ----
+REM ==========================================================
+REM Verify WinPE
+REM ==========================================================
 if not exist X:\Windows\System32\wpeinit.exe (
-  echo ERROR: This does not look like WinPE ^(missing X:\Windows\System32\wpeinit.exe^).
-  echo Aborting to avoid capturing from a live OS.
-  pause
-  exit /b 1
+    echo ERROR: WinPE environment not detected.
+    echo Missing:
+    echo   X:\Windows\System32\wpeinit.exe
+    pause
+    exit /b 1
 )
 
-REM ---- Verify D:\ (Data Drive) is accessible ----
+REM ==========================================================
+REM Verify Data Drive
+REM ==========================================================
 if not exist D:\ (
-  echo ERROR: D:\ ^(Data Drive^) is not accessible.
-  echo Make sure the data partition is online and assigned to D:.
-  pause
-  exit /b 1
+    echo ERROR: D:\ is not accessible.
+    echo Make sure the data drive is mounted as D:
+    pause
+    exit /b 2
 )
 
-REM ---- Hardcode destination to Data Drive ----
-set CAPDRIVE=D:
 
-REM ---- Ensure folders exist ----
-if not exist "%CAPDRIVE%\Images"  mkdir "%CAPDRIVE%\Images"
-if not exist "%CAPDRIVE%\Logs"    mkdir "%CAPDRIVE%\Logs"
+REM ==========================================================
+REM Locate DATA partition on USB
+REM ==========================================================
+set CAPDRIVE=
 
-REM ---- Build timestamp: YYYYMMDD-HHMMSS ----
-set TS=
-for /f "tokens=2 delims==" %%I in ('wmic os get LocalDateTime /value ^| find "="') do set LDT=%%I
-REM LDT format: YYYYMMDDhhmmss.ssssss+-UUU
-if defined LDT (
-  set YYYY=!LDT:~0,4!
-  set MM=!LDT:~4,2!
-  set DD=!LDT:~6,2!
-  set hh=!LDT:~8,2!
-  set mi=!LDT:~10,2!
-  set ss=!LDT:~12,2!
-  set TS=!YYYY!!MM!!DD!-!hh!!mi!!ss!
-) else (
-  echo WARNING: Unable to read system time via WMIC.
-  echo Using fallback timestamp.
-  set TS=UNKNOWN-TIME
+for %%i in (D E F G H I J K L M N O P) do (
+    vol %%i: 2>nul | find /I "CAPTURE" >nul && set CAPDRIVE=%%i:
 )
 
-set IMGFILE=%CAPDRIVE%\Images\golden-image-!TS!.wim
-set LOGFILE=%CAPDRIVE%\Logs\capture-!TS!.log
+REM Fail-safe
+if "%CAPDRIVE%"=="" (
+    echo ERROR: Data partition not found!
+    pause
+    exit /b 1
+)
+
+
+REM ==========================================================
+REM Create folders
+REM ==========================================================
+if not exist "%CAPDRIVE%\Images" mkdir "%CAPDRIVE%\Images"
+if not exist "%CAPDRIVE%\Logs"   mkdir "%CAPDRIVE%\Logs"
+
+REM ==========================================================
+REM Build timestamp using DATE and TIME
+REM Compatible with minimal WinPE
+REM ==========================================================
+set TS=%DATE%_%TIME%
+
+REM Replace invalid filename characters
+set TS=%TS:/=-%
+set TS=%TS:\=-%
+set TS=%TS::=-%
+set TS=%TS:.=-%
+set TS=%TS:,=-%
+set TS=%TS: =0%
+
+REM Remove weekday if present
+REM Example:
+REM Tue 06-02-2026_07-45-11-22
+REM becomes:
+REM 06-02-2026_07-45-11-22
+
+if not "%TS:~3,1%"=="-" (
+    set TS=%TS:~4%
+)
+
+REM ==========================================================
+REM Final filenames
+REM ==========================================================
+set IMGFILE=%CAPDRIVE%\Images\golden-image-%TS%.wim
+set LOGFILE=%CAPDRIVE%\Logs\capture-%TS%.log
 
 echo.
 echo DATA DRIVE:    %CAPDRIVE%
-echo Output WIM:    %IMGFILE%
-echo Log file:      %LOGFILE%
+echo OUTPUT WIM:    %IMGFILE%
+echo LOG FILE:      %LOGFILE%
 echo.
 
-REM ---- Last chance guardrail ----
-echo WARNING: This will capture the OS from C:\ into a new WIM file.
-set /p OK=Type CAPTURE to proceed: 
+REM ==========================================================
+REM Confirmation
+REM ==========================================================
+echo WARNING: This will capture C:\ into a new WIM image.
+echo.
+
+set /p OK=Type CAPTURE to continue: 
+
 if /I not "%OK%"=="CAPTURE" (
-  echo Cancelled.
-  exit /b 2
+    echo.
+    echo Capture cancelled.
+    exit /b 3
 )
 
-REM ---- Basic sanity checks on C:\ ----
+REM ==========================================================
+REM Basic validation
+REM ==========================================================
 if not exist C:\Windows\System32 (
-  echo ERROR: C:\Windows\System32 not found. Is C: the Windows volume?
-  echo Aborting.
-  pause
-  exit /b 3
+    echo.
+    echo ERROR: C:\Windows\System32 not found.
+    echo Is C: the Windows partition?
+    pause
+    exit /b 4
 )
 
+REM ==========================================================
+REM Start capture
+REM ==========================================================
 echo.
 echo Starting DISM capture...
-echo ^(This can take a while. Do not remove power or storage.^)
+echo This may take a while.
+echo Do not remove power or storage devices.
 echo.
 
 dism /Capture-Image ^
-  /ImageFile:"%IMGFILE%" ^
-  /CaptureDir:C:\ ^
-  /Name:"TPC Golden Image Win11 IoT LTSC 2024" ^
-  /Compress:max ^
-  /CheckIntegrity ^
-  /LogPath:"%LOGFILE%"
+    /ImageFile:"%IMGFILE%" ^
+    /CaptureDir:C:\ ^
+    /Name:"TPC Golden Image Win11 IoT LTSC 2024" ^
+    /Compress:max ^
+    /CheckIntegrity ^
+    /LogPath:"%LOGFILE%"
 
 if errorlevel 1 (
-  echo.
-  echo ERROR: DISM capture failed. See log:
-  echo   %LOGFILE%
-  pause
-  exit /b 10
+    echo.
+    echo ERROR: DISM capture failed.
+    echo Review log:
+    echo   %LOGFILE%
+    pause
+    exit /b 10
 )
 
 echo.
-echo SUCCESS: Capture completed.
+echo ==========================================================
+echo SUCCESS: Capture completed
+echo ==========================================================
+echo.
 echo WIM saved to:
 echo   %IMGFILE%
 echo.
-echo Shutting down now to avoid accidental Windows boot...
+
+echo Shutting down WinPE...
 wpeutil shutdown
