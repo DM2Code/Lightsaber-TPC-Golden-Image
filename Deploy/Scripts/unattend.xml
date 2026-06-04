@@ -128,8 +128,8 @@
         
         <SynchronousCommand wcm:action="add">
           <Order>1</Order>
-          <Description>Set display resolution to 1152x864</Description>
-          <CommandLine>C:\Windows\Setup\Scripts\QRes.exe /X:1152 /Y:864</CommandLine>
+          <Description>Set display resolution to 1920x1080</Description>
+          <CommandLine>C:\Windows\Setup\Scripts\QRes.exe /X:1920 /Y:1080</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>     
 
