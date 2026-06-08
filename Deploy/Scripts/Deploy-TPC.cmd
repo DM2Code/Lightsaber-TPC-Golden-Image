@@ -278,6 +278,24 @@ if errorlevel 1 (
 )
 
 copy /Y "%USBDRIVE%\Utils\QRes.exe" "W:\Windows\Setup\Scripts\QRes.exe" >> "%TMPLOG%" 2>&1
+if errorlevel 1 (
+    echo WARNING: Could not copy QRes.exe.
+    echo WARNING: Could not copy QRes.exe >> "%TMPLOG%"
+) else (
+    echo QRes.exe copied.
+    echo QRes.exe copied >> "%TMPLOG%"
+)
+
+if not exist W:\Windows\Setup\Apps mkdir W:\Windows\Setup\Apps
+xcopy /E /I /Y "%USBDRIVE%\Apps\*" "W:\Windows\Setup\Apps\" >> "%TMPLOG%" 2>&1
+if errorlevel 1 (
+    echo WARNING: Could not copy app files.
+    echo WARNING: Could not copy app files >> "%TMPLOG%"
+) else (
+    echo App files copied to W:\Windows\Setup\Apps\
+    echo App files copied >> "%TMPLOG%"
+)
+
 
 REM ============================================================
 REM  STEP 7 - Applying display defaults

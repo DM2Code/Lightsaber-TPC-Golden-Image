@@ -1,0 +1,1 @@
+Get-NetAdapter | Where-Object { $_.Status -ne "Disabled" } | Disable-NetAdapter -Confirm:$false
