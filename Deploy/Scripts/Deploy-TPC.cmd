@@ -250,6 +250,33 @@ if not exist W:\Windows\System32\bcdboot.exe (
 echo Image applied and verified.
 echo Image applied and verified >> "%TMPLOG%"
 
+
+REM ============================================================
+REM  STEP 5b - Prompt for Windows product key
+REM ============================================================
+echo.
+echo ============================================================
+echo  PRODUCT KEY ENTRY
+echo  Enter the Windows IoT Enterprise product key.
+echo  Format: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
+echo  Press ENTER with no input to skip (key will NOT be installed).
+echo ============================================================
+echo.
+set PRODUCT_KEY=
+set /p PRODUCT_KEY=Product key: 
+if not defined PRODUCT_KEY (
+    echo WARNING: No product key entered. Skipping key installation.
+    echo WARNING: No product key entered >> "%TMPLOG%"
+    echo @echo off > "%USBDRIVE%\Scripts\Install-ProductKey.cmd"
+    echo echo Product key install skipped. >> "%USBDRIVE%\Scripts\Install-ProductKey.cmd"
+) else (
+    echo Product key accepted.
+    echo Product key accepted >> "%TMPLOG%"
+    echo @echo off > "%USBDRIVE%\Scripts\Install-ProductKey.cmd"
+    echo cscript //nologo C:\Windows\System32\slmgr.vbs /ipk %PRODUCT_KEY% >> "%USBDRIVE%\Scripts\Install-ProductKey.cmd"
+)
+
+
 REM ============================================================
 REM  STEP 6 - Inject unattend.xml to skip OOBE
 REM ============================================================

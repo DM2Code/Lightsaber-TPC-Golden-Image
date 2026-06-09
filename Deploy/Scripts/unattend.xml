@@ -2,8 +2,8 @@
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
 
   <!--
-  ═══════════════════════════════════════════════════════════════════════
-   TPC Deployment  –  unattend.xml
+  =======================================================================
+   TPC Deployment  -  unattend.xml
    Purpose : Skip all OOBE screens with US locale defaults.
              No Microsoft account, no Wi-Fi setup, no telemetry opt-in.
              Sets solid navy-blue desktop background for all users.
@@ -14,14 +14,14 @@
 
    Placement (handled automatically by Deploy-TPC.cmd):
      W:\Windows\Panther\unattend.xml
-  ═══════════════════════════════════════════════════════════════════════
+  =======================================================================
   -->
 
-  <!-- ──────────────────────────────────────────────────────────────────
+  <!-- ==================================================================
        specialize pass
        Runs once before first boot, after hardware is detected.
        Good for machine-level settings (name, time zone).
-  ─────────────────────────────────────────────────────────────────────── -->
+  ======================================================================= -->
   <settings pass="specialize">
     <component name="Microsoft-Windows-Shell-Setup"
                processorArchitecture="amd64"
@@ -36,10 +36,10 @@
     </component>
   </settings>
 
-  <!-- ──────────────────────────────────────────────────────────────────
+  <!-- ==================================================================
        oobeSystem pass
        Controls every screen the OOBE wizard would normally show.
-  ─────────────────────────────────────────────────────────────────────── -->
+  ======================================================================= -->
   <settings pass="oobeSystem">
 
     <!-- Locale and keyboard layout -->
@@ -143,7 +143,7 @@
         <SynchronousCommand wcm:action="add">
           <Order>4</Order>
           <Description>Install Product Key (Deferred Activation)</Description>
-          <CommandLine>cscript //nologo C:\Windows\System32\slmgr.vbs /ipk NQ4WW-JMCBF-7B7MC-J7PXH-YY8XD</CommandLine>
+          <CommandLine>cmd /c C:\Windows\Setup\Scripts\Install-ProductKey.cmd</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
 
@@ -163,20 +163,27 @@
         
         <SynchronousCommand wcm:action="add">
           <Order>7</Order>
+          <Description>Enable persistent AutoLogon</Description>
+          <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Enable-AutoLogon.ps1"</CommandLine>
+          <RequiresUserInput>false</RequiresUserInput>
+        </SynchronousCommand>
+
+        <SynchronousCommand wcm:action="add">
+          <Order>8</Order>
           <Description>Enable Keyboard Filter after deployment</Description>
           <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Enable-KeyboardFilter.ps1"</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
 
         <SynchronousCommand wcm:action="add">
-          <Order>8</Order>
+          <Order>9</Order>
           <Description>Enable UWF and protect C drive after deployment</Description>
           <CommandLine>cmd /c uwfmgr.exe filter enable</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
         
         <SynchronousCommand wcm:action="add">
-          <Order>9</Order>
+          <Order>10</Order>
           <Description>Reboot after OOBE to apply background</Description>
           <CommandLine>shutdown /r /t 5</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>

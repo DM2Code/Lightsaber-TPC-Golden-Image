@@ -13,3 +13,19 @@ $s.Save()
 
 # Test Path
 Test-Path 'C:\Program Files\Alcon Research\Lightsaber Panel\Lightsaber Panel.exe'
+
+
+#Disable Keyboard filter
+
+Stop-Service -Name "MsKeyboardFilter" -Force
+Set-Service -Name "MsKeyboardFilter" -StartupType Disabled
+
+#Re-enable keyboard filter
+
+Set-Service MsKeyboardFilter -StartupType Automatic
+Start-Service MsKeyboardFilte
+
+
+#Disable Write Filter
+uwfmgr.exe filter disable
+uwfmgr.exe get-config
