@@ -135,55 +135,69 @@
 
         <SynchronousCommand wcm:action="add">
           <Order>3</Order>
+          <Description>Set system volume</Description>
+          <CommandLine>C:\Windows\Setup\Scripts\NirCmd.exe setsysvolume 32500</CommandLine>
+          <RequiresUserInput>false</RequiresUserInput>
+        </SynchronousCommand>        
+
+        <SynchronousCommand wcm:action="add">
+          <Order>4</Order>
           <Description>Disable Ethernet and WiFi</Description>
           <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Disable-NetworkAdapters.ps1"</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
 
         <SynchronousCommand wcm:action="add">
-          <Order>4</Order>
+          <Order>5</Order>
           <Description>Install Product Key (Deferred Activation)</Description>
           <CommandLine>cmd /c C:\Windows\Setup\Scripts\Install-ProductKey.cmd</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
 
         <SynchronousCommand wcm:action="add">
-          <Order>5</Order>
+          <Order>6</Order>
           <Description>Copy Lightsaber Apps</Description>
           <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Move-LightsaberApps.ps1"</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
 
         <SynchronousCommand wcm:action="add">
-          <Order>6</Order>
+          <Order>7</Order>
           <Description>Create Lightsaber Panel desktop shortcut</Description>
-          <CommandLine>powershell.exe -ExecutionPolicy Bypass -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\Lightsaber Panel.lnk'); $s.TargetPath = 'C:\Program Files\Alcon Research\Lightsaber Panel\ls_panel.exe'; $s.Save()"</CommandLine>
+          <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Create-DesktopShortcuts.ps1"</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>        
         
         <SynchronousCommand wcm:action="add">
-          <Order>7</Order>
+          <Order>8</Order>
           <Description>Enable persistent AutoLogon</Description>
           <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Enable-AutoLogon.ps1"</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
 
         <SynchronousCommand wcm:action="add">
-          <Order>8</Order>
+          <Order>9</Order>
           <Description>Enable Keyboard Filter after deployment</Description>
           <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Enable-KeyboardFilter.ps1"</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
 
         <SynchronousCommand wcm:action="add">
-          <Order>9</Order>
+          <Order>10</Order>
+          <Description>Set custom shell to Lightsaber Monitor</Description>
+          <CommandLine>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Set-CustomShell.ps1"</CommandLine>
+          <RequiresUserInput>false</RequiresUserInput>
+        </SynchronousCommand>
+
+        <SynchronousCommand wcm:action="add">
+          <Order>11</Order>
           <Description>Enable UWF and protect C drive after deployment</Description>
           <CommandLine>cmd /c uwfmgr.exe filter enable</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
         
         <SynchronousCommand wcm:action="add">
-          <Order>10</Order>
+          <Order>12</Order>
           <Description>Reboot after OOBE to apply background</Description>
           <CommandLine>shutdown /r /t 5</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>

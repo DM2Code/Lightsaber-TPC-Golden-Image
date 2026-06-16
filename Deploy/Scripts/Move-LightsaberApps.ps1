@@ -1,10 +1,10 @@
 $baseDst = "C:\Program Files\Alcon Research"
-$panelDst = Join-Path $baseDst "Lightsaber Panel"
-$simDst   = Join-Path $baseDst "Lightsaber Simulator"
+$panelDst = Join-Path $baseDst "ls_panel"
+$simDst   = Join-Path $baseDst "ls_monitor"
 
 $appsRoot  = "C:\Windows\Setup\Apps"
 $panelSrc  = Join-Path $appsRoot "ls_panel"
-$simSrc    = Join-Path $appsRoot "ls_simulator"
+$simSrc    = Join-Path $appsRoot "ls_monitor"
 
 New-Item -ItemType Directory -Path $panelDst -Force | Out-Null
 New-Item -ItemType Directory -Path $simDst -Force | Out-Null

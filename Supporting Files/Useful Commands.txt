@@ -29,3 +29,9 @@ Start-Service MsKeyboardFilte
 #Disable Write Filter
 uwfmgr.exe filter disable
 uwfmgr.exe get-config
+
+#Verify log locations
+Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\EventLog\Application" | Select-Object File
+Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\EventLog\System" | Select-Object File
+Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\EventLog\Security" | Select-Object File
+Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\EventLog\Setup" | Select-Object File

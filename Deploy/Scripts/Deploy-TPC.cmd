@@ -313,6 +313,15 @@ if errorlevel 1 (
     echo QRes.exe copied >> "%TMPLOG%"
 )
 
+copy /Y "%USBDRIVE%\Utils\nircmd.exe" "W:\Windows\Setup\Scripts\nircmd.exe" >> "%TMPLOG%" 2>&1
+if errorlevel 1 (
+    echo WARNING: Could not copy nircmd.exe.
+    echo WARNING: Could not copy nircmd.exe >> "%TMPLOG%"
+) else (
+    echo nircmd.exe copied.
+    echo nircmd.exe copied >> "%TMPLOG%"
+)
+
 if not exist W:\Windows\Setup\Apps mkdir W:\Windows\Setup\Apps
 xcopy /E /I /Y "%USBDRIVE%\Apps\*" "W:\Windows\Setup\Apps\" >> "%TMPLOG%" 2>&1
 if errorlevel 1 (
